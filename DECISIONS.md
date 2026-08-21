@@ -8,6 +8,7 @@
 | ADR-004 | Desktop injection is isolated per OS. | Accepted | Permissions and APIs fundamentally differ. |
 | ADR-005 | Phase 1 is dependency-free Node workspaces. | Accepted | Current host can verify it without pretending native targets build. |
 | ADR-006 | JSON is the initial versioned wire representation. | Accepted | Optimize only after latency profiling. |
+| ADR-007 | Motion core prefers native fused attitude, with gyro+accelerometer complementary fallback; magnetometer is excluded. | Accepted | Uses OS-specific fusion when available, remains testable without native APIs, and avoids absolute-heading instability. |
 
 ### ADR-001 evidence
 

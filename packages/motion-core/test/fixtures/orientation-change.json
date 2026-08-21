@@ -1,0 +1,7 @@
+[
+  {"timestampMs":0,"attitude":{"yaw":0,"pitch":0,"roll":0}},
+  {"timestampMs":20,"attitude":{"yaw":0.1,"pitch":0,"roll":0}},
+  {"timestampMs":40,"attitude":{"yaw":0.1,"pitch":0,"roll":0}},
+  {"timestampMs":60,"attitude":{"yaw":0.2,"pitch":0,"roll":0}},
+  {"timestampMs":80,"attitude":{"yaw":0.2,"pitch":0,"roll":0}}
+]

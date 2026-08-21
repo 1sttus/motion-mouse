@@ -1,0 +1,5 @@
+[
+  {"timestampMs":0,"attitude":{"yaw":0,"pitch":0,"roll":0}},
+  {"timestampMs":10,"attitude":{"yaw":1,"pitch":0,"roll":0}},
+  {"timestampMs":20,"attitude":{"yaw":2,"pitch":0,"roll":0}}
+]

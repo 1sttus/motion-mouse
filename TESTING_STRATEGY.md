@@ -10,3 +10,5 @@
 | Security | pairing/revocation/expiry adversarial tests | QR UX and local-network attack test |
 
 Phase 1 gates: Node syntax check, structural lint, unit tests, package dependency rules, and documentation-reference validation. CI must execute platform-native jobs only after the corresponding toolchain is provisioned. Record measured latency (p50/p95/p99), disconnect recovery, and battery impact before beta.
+
+Phase 2 motion fixtures exercise stationary noise, slow/fast (including sudden) fused movement, calibration/recentering, pause/resume, display-orientation mapping, timestamp rejection, and low/high-rate gyro+accelerometer fallback. Fixtures replay through the public engine interface, ensuring deterministic output. Real Android and iOS capture traces are required before production tuning.

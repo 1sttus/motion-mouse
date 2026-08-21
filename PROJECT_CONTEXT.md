@@ -21,7 +21,7 @@ Motion Mouse makes a phone a wireless, motion-controlled pointing device. Tilt/m
 
 ## Current status
 
-Phase 1 foundation. The repository contains protocol and deterministic motion-domain packages, empty host boundaries, documentation, and Node-based quality checks. It does **not** capture sensors, discover peers, open sockets, or inject desktop input.
+Phase 2 motion engine. The repository contains protocol and deterministic motion-domain packages, including a capability-aware motion engine and recorded-trace replay tests. It does **not** capture sensors on hardware, discover peers, open sockets, or inject desktop input.
 
 ## Verified development environment (2026-08-21)
 
