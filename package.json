@@ -1,0 +1,17 @@
+{
+  "name": "motion-mouse",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "engines": { "node": ">=24.0.0", "npm": ">=11.0.0" },
+  "scripts": {
+    "build": "npm run verify:syntax",
+    "lint": "node scripts/lint.mjs",
+    "test": "node --test packages/*/test/*.test.js",
+    "verify:syntax": "node scripts/check-syntax.mjs",
+    "verify:graph": "node scripts/verify-graph.mjs",
+    "verify:docs": "node scripts/verify-docs.mjs",
+    "verify": "npm run lint && npm test && npm run verify:graph && npm run verify:docs && npm run build"
+  }
+}

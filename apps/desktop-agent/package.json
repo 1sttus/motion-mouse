@@ -1,0 +1,7 @@
+{
+  "name": "@motion-mouse/desktop-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Future desktop receiver and per-platform pointer adapter boundary."
+}

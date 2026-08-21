@@ -1,0 +1,7 @@
+{
+  "name": "@motion-mouse/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Future native mobile host boundary; no UI or sensor implementation in Phase 1."
+}
