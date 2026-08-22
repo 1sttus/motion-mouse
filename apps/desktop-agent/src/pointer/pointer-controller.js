@@ -13,7 +13,32 @@ export class PointerController {
   }
 
   /**
-   * Resets the controller state (e.g., releases buttons, stops movement).
+   * Presses a mouse button.
+   * @param {'left'|'right'|'middle'} button
+   */
+  buttonDown(button) {
+    throw new Error('PointerController#buttonDown must be implemented');
+  }
+
+  /**
+   * Releases a mouse button.
+   * @param {'left'|'right'|'middle'} button
+   */
+  buttonUp(button) {
+    throw new Error('PointerController#buttonUp must be implemented');
+  }
+
+  /**
+   * Scrolls by the given deltas.
+   * @param {number} dx - Horizontal scroll delta.
+   * @param {number} dy - Vertical scroll delta.
+   */
+  scroll(dx, dy) {
+    throw new Error('PointerController#scroll must be implemented');
+  }
+
+  /**
+   * Resets the controller state (e.g., releases all buttons, stops movement).
    */
   stop() {
     throw new Error('PointerController#stop must be implemented');

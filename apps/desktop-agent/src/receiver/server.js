@@ -92,15 +92,22 @@ class MotionSession {
 }
 
 export function startServer() {
-  const attrs = [{ name: 'commonName', value: 'MotionMouseDev' }];
-  const pems = selfsigned.generate(attrs, { days: 30 });
+  const useTLS = process.env.MM_NO_TLS !== 'true';
+  let server;
+  let wss;
 
-  const server = createServer({
-    key: pems.private,
-    cert: pems.cert
-  });
-
-  const wss = new WebSocketServer({ server });
+  if (useTLS) {
+    const attrs = [{ name: 'commonName', value: 'MotionMouseDev' }];
+    const pems = selfsigned.generate(attrs, { days: 30 });
+    server = createServer({
+      key: pems.private,
+      cert: pems.cert
+    });
+    wss = new WebSocketServer({ server });
+  } else {
+    wss = new WebSocketServer({ port: PORT });
+    console.log(`[Server] Plain WS listening on port ${PORT}`);
+  }
   const qrProvider = new QRProvider();
   const controller = new WindowsPointerController();
 
@@ -137,13 +144,16 @@ export function startServer() {
     }
   }, HEARTBEAT_INTERVAL);
 
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Server] WSS listening on port ${PORT}`);
-  });
+  if (useTLS) {
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`[Server] WSS listening on port ${PORT}`);
+    });
+  }
 
   return {
     stop: () => {
-      server.close();
+      if (useTLS) server.close();
+      else wss.close();
       controller.close();
     },
     regenerateToken: () => {

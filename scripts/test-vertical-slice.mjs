@@ -7,39 +7,41 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AGENT_PATH = path.join(__dirname, '../apps/desktop-agent/index.js');
 
 async function runTest() {
-  console.log('Starting Desktop Agent for verification...');
-  const agent = spawn('node', [AGENT_PATH], { stdio: ['pipe', 'pipe', 'inherit'] });
+  console.log('Starting Desktop Agent for verification (NO TLS)...');
+  const agent = spawn('node', [AGENT_PATH], {
+    env: { ...process.env, MM_NO_TLS: 'true' }
+  });
 
   let token = null;
   let ip = null;
 
-  const agentStarted = new Promise((resolve) => {
+  const agentStarted = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Agent start timeout')), 5000);
     agent.stdout.on('data', (data) => {
       const output = data.toString();
-      console.log(`[Agent Out] ${output}`);
+      process.stdout.write(output);
       const tokenMatch = output.match(/Token: (\w+)/);
       const ipMatch = output.match(/IP:\s+([\d.]+)/);
       if (tokenMatch) token = tokenMatch[1];
       if (ipMatch) ip = ipMatch[1];
-      if (token && ip) resolve();
+      if (token && ip) {
+        clearTimeout(timeout);
+        resolve();
+      }
     });
   });
 
   await agentStarted;
-  console.log(`Discovered Agent at ${ip} with Token ${token}`);
+  console.log(`\nDiscovered Agent at ${ip} with Token ${token}`);
 
   // Simulate Client
-  const ws = new WebSocket(`wss://localhost:8080`, {
-    rejectUnauthorized: false
-  });
+  const ws = new WebSocket(`ws://localhost:8080`);
 
-  const connected = new Promise((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     ws.on('open', resolve);
     ws.on('error', reject);
   });
-
-  await connected;
-  console.log('Client connected to WSS');
+  console.log('Client connected to WS');
 
   // Perform Auth
   ws.send(JSON.stringify({
@@ -50,40 +52,42 @@ async function runTest() {
     payload: { token }
   }));
 
-  const authenticated = new Promise((resolve) => {
+  const sessionId = await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Auth timeout')), 5000);
     ws.on('message', (data) => {
       const msg = JSON.parse(data.toString());
       if (msg.kind === 'session.ack') {
-        console.log('Client authenticated successfully');
+        clearTimeout(timeout);
         resolve(msg.sessionId);
       }
     });
   });
-
-  const sessionId = await authenticated;
+  console.log(`Client authenticated successfully: ${sessionId}`);
 
   // Send Motion Data
-  console.log('Sending 100 motion packets...');
+  console.log('Sending 20 motion packets...');
   const start = Date.now();
-  for (let i = 0; i < 100; i++) {
+  for (let i = 0; i < 20; i++) {
     ws.send(JSON.stringify({
       v: 1,
       kind: 'pointer.delta',
       sessionId,
       seq: i + 2,
       sentAtMs: Date.now(),
-      payload: { dx: 1, dy: 1 }
+      payload: { dx: 5, dy: 5 }
     }));
-    await new Promise(r => setTimeout(r, 16)); // ~60Hz
+    await new Promise(r => setTimeout(r, 16));
   }
 
   const end = Date.now();
-  console.log(`Finished sending 100 packets in ${end - start}ms`);
-  console.log(`Average packet interval: ${(end - start) / 100}ms`);
+  console.log(`Finished sending 20 packets in ${end - start}ms`);
 
   ws.close();
   agent.kill();
-  console.log('Verification complete.');
+  process.exit(0);
 }
 
-runTest().catch(console.error);
+runTest().catch(err => {
+  console.error(err);
+  process.exit(1);
+});

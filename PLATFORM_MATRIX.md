@@ -1,5 +1,18 @@
 # Platform Matrix
 
+## Capability Matrix
+
+| Capability | Android | iOS | Windows | macOS | Linux |
+| --- | --- | --- | --- | --- | --- |
+| **Gyroscope** | [ ] | [ ] | — | — | — |
+| **Accelerometer** | [ ] | [ ] | — | — | — |
+| **Wi-Fi** | [ ] | [ ] | [ ] | [ ] | [ ] |
+| **WebSocket** | [ ] | [ ] | [ ] | [ ] | [ ] |
+| **Mouse API** | — | — | [ ] | [ ] | [ ] |
+| **Bluetooth HID** | (Inv.) | (Inv.) | [ ] | [ ] | [ ] |
+
+## Platform Details
+
 | Platform | Sensor / receiver capability | Pointer route | Status / constraint |
 | --- | --- | --- | --- |
 | Android | rotation-vector sensor may be absent; runtime probe | mobile sender only | native Kotlin module required |
@@ -16,5 +29,5 @@ Evidence: Android documents `TYPE_ROTATION_VECTOR`; Apple Core Motion exposes fu
 
 | Slice | Implemented route | Validation status |
 | --- | --- | --- |
-| Android | Chrome browser, `deviceorientation`, HTTPS/WSS sender | source and protocol smoke-tested; requires real-phone permission/certificate acceptance |
-| Windows | Node receiver → pointer abstraction → persistent PowerShell Win32 `GetCursorPos`/`SetCursorPos` adapter | dry-run server and WSS handshake tested; real-cursor test intentionally awaits user hardware run |
+| Android | Native App, `SensorManager`, WSS Secure Client | [ ] Planned |
+| Windows | Node receiver (WSS) → `PointerController` → PowerShell adapter | [ ] Planned |
