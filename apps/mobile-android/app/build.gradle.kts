@@ -19,9 +19,25 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            val properties = java.util.Properties()
+            val propertiesFile = rootProject.file("signing.properties")
+            if (propertiesFile.exists()) {
+                properties.load(propertiesFile.inputStream())
+                storeFile = file(properties.getProperty("STORE_FILE"))
+                storePassword = properties.getProperty("STORE_PASSWORD")
+                keyAlias = properties.getProperty("KEY_ALIAS")
+                keyPassword = properties.getProperty("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

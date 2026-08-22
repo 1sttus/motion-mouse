@@ -29,5 +29,5 @@ Evidence: Android documents `TYPE_ROTATION_VECTOR`; Apple Core Motion exposes fu
 
 | Slice | Implemented route | Validation status |
 | --- | --- | --- |
-| Android | Native App, `SensorManager`, WSS Secure Client | [ ] Planned |
-| Windows | Node receiver (WSS) → `PointerController` → PowerShell adapter | [ ] Planned |
+| Android | Native App, `SensorManager`, WSS Secure Client | ✅ Released (v1.0) |
+| Windows | Node receiver (WSS) → `PointerController` → PowerShell adapter | ✅ Released (v1.0) |

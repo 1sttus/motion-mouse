@@ -1,13 +1,47 @@
 # Motion Mouse
 
-Cross-platform, local-first motion mouse. This repository is Phase 1: a dependency-free, testable domain/protocol workspace. Native mobile and desktop hosts are intentionally not yet implemented.
+Control your computer cursor with your smartphone's motion sensors. Secure, low-latency, and local-first.
 
-Run `npm.cmd install` then `npm.cmd run verify` on Windows.
+## 🚀 Quick Start
 
-## Phase 3 development slice
+### 1. Install Desktop Agent (Windows)
+- Download the latest `motion-mouse-agent.exe` from the Releases page.
+- Run the executable. A system tray icon will appear.
+- Right-click the tray icon and select **Show Pairing QR**.
 
-This is an Android Chrome → Windows-only development slice. Start the receiver with `node apps/desktop-agent/src/index.js`, open the printed HTTPS URL on an Android phone on the same private LAN, inspect/accept the development certificate, then grant motion permission. The one-time token in the URL is required to connect. Use `MOTION_MOUSE_DRY_RUN=1` to exercise the receiver without moving the Windows cursor.
+### 2. Install Mobile App (Android)
+- Download and install the `motion-mouse.apk` or `.aab`.
+- Complete the onboarding flow to grant Camera permissions.
+- Tap **Pair New Device** and scan the QR code displayed on your computer.
+- Once connected, tap **Start Control**.
 
-It is not a production pairing or certificate experience. See SECURITY_MODEL.md before exposing it outside a private test LAN.
+## 🛡️ Security & Privacy
+- **Local Only**: Data never leaves your local network. No cloud relay.
+- **Encrypted**: Transport is secured via TLS (WSS).
+- **Authenticated**: Pairing is protected by a one-time secret token exchanged via QR code.
 
-The architectural record is rooted in [PROJECT_CONTEXT.md](PROJECT_CONTEXT.md). No module may bypass `packages/protocol` to communicate across the phone/desktop boundary.
+## 🛠️ Development
+
+### Repository Structure
+- `apps/mobile-android`: Native Kotlin Android application.
+- `apps/desktop-agent`: Node.js receiver with system tray integration.
+- `packages/protocol`: Shared wire protocol definitions.
+- `packages/motion-core`: Shared motion processing logic.
+
+### Building from Source
+
+#### Desktop Agent
+```bash
+cd apps/desktop-agent
+npm install
+npm run build:win
+```
+
+#### Android App
+```bash
+cd apps/mobile-android
+./gradlew bundleRelease
+```
+
+## 📄 License
+MIT
