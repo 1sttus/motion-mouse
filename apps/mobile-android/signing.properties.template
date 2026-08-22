@@ -1,0 +1,5 @@
+# Copy this to signing.properties and fill in your details
+STORE_FILE=path/to/keystore.jks
+STORE_PASSWORD=password
+KEY_ALIAS=alias
+KEY_PASSWORD=password
