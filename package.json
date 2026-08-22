@@ -13,6 +13,7 @@
   },
   "scripts": {
     "build": "npm run verify:syntax",
+    "desktop": "node apps/desktop-agent/src/index.js",
     "lint": "node scripts/lint.mjs",
     "test": "node --test packages/*/test/*.test.js apps/*/test/*.test.js",
     "verify:syntax": "node scripts/check-syntax.mjs",

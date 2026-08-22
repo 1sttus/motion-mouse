@@ -23,7 +23,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -132,11 +131,12 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     private fun handleScannedQr(content: String) {
         try {
             val uri = Uri.parse(content)
-            val host = uri.host ?: throw Exception("Invalid host")
-            val port = if (uri.port != -1) uri.port else 8080
+            val host = uri.getQueryParameter("ip") ?: uri.host ?: throw Exception("Invalid host")
+            val port = uri.getQueryParameter("port")?.toIntOrNull() ?: if (uri.port != -1) uri.port else 8080
             val token = uri.getQueryParameter("token") ?: throw Exception("Missing token")
             
-            val url = "wss://$host:$port/ws"
+            // Use just wss://host:port for the base connection
+            val url = "wss://$host:$port"
             serverInfo.value = "$host:$port"
             
             connectToServer(url, token)
@@ -199,7 +199,9 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun stopSensors() {
-        sensorManager.unregisterListener(this)
+        if (::sensorManager.isInitialized) {
+            sensorManager.unregisterListener(this)
+        }
     }
 
     override fun onSensorChanged(event: SensorEvent) {
@@ -321,7 +323,7 @@ fun MainScreen(
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = ShapeDefaults.Medium
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Icon(Icons.Default.Refresh, contentDescription = null)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text("Pair New Device")
                 }

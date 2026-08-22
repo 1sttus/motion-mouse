@@ -58,7 +58,7 @@ class NetworkClient(
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
-                Log.e(TAG, "WebSocket Failure: ${t.message}", t)
+                Log.e(TAG, "WebSocket Failure: ${t.message}. Response code: ${response?.code}", t)
                 _connectionState.value = ConnectionState.ERROR
                 cleanup()
             }
@@ -66,6 +66,7 @@ class NetworkClient(
     }
 
     private fun authenticate() {
+        Log.d(TAG, "Sending auth packet with token: $token")
         val authPacket = Protocol.createAuthPacket(token, seq++)
         webSocket?.send(authPacket)
     }
@@ -89,7 +90,7 @@ class NetworkClient(
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
             while (isActive) {
-                delay(30000) // 30s heartbeat
+                delay(1000) // Keep the session alive within the receiver timeout.
                 sessionId?.let {
                     webSocket?.send(Protocol.createHeartbeatPacket(it, seq++))
                 }
@@ -173,15 +174,16 @@ class NetworkClient(
                 override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
             })
 
-            val sslContext = SSLContext.getInstance("SSL")
+            val sslContext = SSLContext.getInstance("TLS")
             sslContext.init(null, trustAllCerts, SecureRandom())
             val sslSocketFactory = sslContext.socketFactory
 
             return OkHttpClient.Builder()
                 .sslSocketFactory(sslSocketFactory, trustAllCerts[0] as X509TrustManager)
                 .hostnameVerifier { _, _ -> true }
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(0, TimeUnit.MILLISECONDS) // For WebSockets
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(0, TimeUnit.MILLISECONDS)
+                .writeTimeout(0, TimeUnit.MILLISECONDS)
                 .build()
         } catch (e: Exception) {
             throw RuntimeException(e)

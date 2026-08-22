@@ -1,25 +1,36 @@
-import { createServer } from 'https';
+import { createServer } from 'node:https';
 import { WebSocketServer } from 'ws';
 import selfsigned from 'selfsigned';
 import { validateSessionEvent } from '@motion-mouse/protocol';
 import { QRProvider } from './qr-provider.js';
 import { WindowsPointerController } from '../adapters/windows-pointer-controller.js';
+import { PairingStore } from './pairing-store.js';
+import { TrayManager } from './tray-manager.js';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const PAIRING_STORE_PATH = path.join(__dirname, 'pairing-store.json');
 
 const PORT = 8080;
 const HEARTBEAT_INTERVAL = 3000;
 const HEARTBEAT_TIMEOUT = 10000;
 
 class MotionSession {
-  constructor(ws, sessionId, controller) {
+  constructor(ws, sessionId, controller, onClose) {
     this.ws = ws;
     this.sessionId = sessionId;
     this.controller = controller;
+    this.onClose = onClose;
     this.lastHeartbeat = Date.now();
     this.seq = 0;
     this.active = false;
 
     this.ws.on('message', (data) => this.handleMessage(data));
-    this.ws.on('close', () => this.cleanup());
+    this.ws.on('close', () => {
+      this.cleanup();
+      if (this.onClose) this.onClose();
+    });
   }
 
   handleMessage(data) {
@@ -66,7 +77,6 @@ class MotionSession {
           }
           break;
         case 'calibrate':
-          // Phase 3: Recenter is handled on mobile, but we can acknowledge it
           console.log(`[Session ${this.sessionId}] Calibration requested`);
           break;
         case 'session.close':
@@ -92,9 +102,11 @@ class MotionSession {
   }
 
   cleanup() {
-    console.log(`[Session ${this.sessionId}] Closing session`);
-    this.active = false;
-    this.controller.stop();
+    if (this.active) {
+      console.log(`[Session ${this.sessionId}] Closing session`);
+      this.active = false;
+      this.controller.stop();
+    }
     this.ws.terminate();
   }
 
@@ -120,40 +132,79 @@ export function startServer() {
     wss = new WebSocketServer({ port: PORT });
     console.log(`[Server] Plain WS listening on port ${PORT}`);
   }
+
   const qrProvider = new QRProvider();
   const controller = new WindowsPointerController();
+  const pairingStore = new PairingStore(PAIRING_STORE_PATH);
 
   let pairingInfo = qrProvider.generatePairingInfo(PORT);
   const sessions = new Map();
 
+  const updateTray = () => trayManager.updateStatus(sessions.size > 0);
+
+  const trayManager = new TrayManager({
+    onShowQR: () => {
+      pairingInfo = qrProvider.generatePairingInfo(PORT);
+    },
+    onResetPairing: () => {
+      pairingStore.clear();
+      console.log('[Server] Pairing store cleared');
+    },
+    onExit: () => {
+      console.log('[Server] Exiting...');
+      process.exit(0);
+    }
+  });
+  trayManager.start();
+
   wss.on('connection', (ws) => {
     const sessionId = Math.random().toString(36).substring(2, 10);
-    const session = new MotionSession(ws, sessionId, controller);
+    const session = new MotionSession(ws, sessionId, controller, () => {
+      sessions.delete(sessionId);
+      updateTray();
+    });
 
     ws.once('message', (data) => {
       try {
         const event = JSON.parse(data.toString());
-        if (event.kind === 'session.auth' && event.payload.token === pairingInfo.token) {
-          session.promote();
-          sessions.set(sessionId, session);
+        if (event.kind === 'session.auth') {
+          const token = event.payload.token;
+          const isCurrentToken = token === pairingInfo.token;
+          const isStoredToken = pairingStore.isValid(token);
+
+          if (isCurrentToken || isStoredToken) {
+            if (isCurrentToken) {
+              pairingStore.addToken(token);
+            }
+            session.promote();
+            sessions.set(sessionId, session);
+            updateTray();
+          } else {
+            console.warn(`[Server] Auth failed for session ${sessionId}`);
+            ws.terminate();
+          }
         } else {
-          console.warn(`[Server] Auth failed for session ${sessionId}`);
+          console.warn(`[Server] Expected session.auth, got ${event.kind}`);
           ws.terminate();
         }
       } catch (err) {
+        console.error(`[Server] Error during auth for session ${sessionId}:`, err);
         ws.terminate();
       }
     });
   });
 
-  setInterval(() => {
+  const heartbeatInterval = setInterval(() => {
+    let changed = false;
     for (const [id, session] of sessions) {
       if (!session.isAlive()) {
         console.warn(`[Session ${id}] Heartbeat timeout`);
         session.cleanup();
         sessions.delete(id);
+        changed = true;
       }
     }
+    if (changed) updateTray();
   }, HEARTBEAT_INTERVAL);
 
   if (useTLS) {
@@ -164,9 +215,11 @@ export function startServer() {
 
   return {
     stop: () => {
+      clearInterval(heartbeatInterval);
       if (useTLS) server.close();
       else wss.close();
       controller.close();
+      trayManager.stop();
     },
     regenerateToken: () => {
       pairingInfo = qrProvider.generatePairingInfo(PORT);

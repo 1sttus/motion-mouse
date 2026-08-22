@@ -1,4 +1,5 @@
 import { networkInterfaces } from 'os';
+import qrcode from 'qrcode-terminal';
 
 /**
  * Generates and displays a pairing QR code (or token) in the console.
@@ -13,19 +14,21 @@ export class QRProvider {
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const ip = this.getLocalIP();
 
+    const pairingUrl = `motionmouse://connect?ip=${ip}&port=${port}&token=${token}`;
+
     console.log('\n┌──────────────────────────────────────────────┐');
     console.log('│             MOTION MOUSE PAIRING             │');
-    console.log('├──────────────────────────────────────────────┤');
+    console.log('└──────────────────────────────────────────────┘\n');
+
+    qrcode.generate(pairingUrl, { small: true });
+
+    console.log('\n┌──────────────────────────────────────────────┐');
     console.log(`│ IP:    ${ip.padEnd(37)} │`);
     console.log(`│ Port:  ${port.toString().padEnd(37)} │`);
     console.log(`│ Token: ${token.padEnd(37)} │`);
     console.log('├──────────────────────────────────────────────┤');
     console.log('│ Scan the QR code in the Mobile App to connect│');
     console.log('└──────────────────────────────────────────────┘\n');
-
-    // In a real implementation, we would print an actual QR code using qrcode-terminal
-    // For now, the user can manually enter the IP and Token if needed, or we assume
-    // the mobile app will eventually have a scanner that reads this format.
 
     return { token, ip };
   }
