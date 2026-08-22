@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.motionmouse.app-mergeDebugResources-2:/values-v25/values-v25.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Hp\\scoop\\apps\\gradle\\current\\.gradle\\caches\\8.14\\transforms\\47b2c6de3a7eac57ac3f73fdd890ca02\\transformed\\appcompat-1.6.1\\res\\values-v25\\values-v25.xml",
+                    "from": {
+                        "startLines": "2,3,4,6",
+                        "startColumns": "4,4,4,4",
+                        "startOffsets": "55,126,209,308",
+                        "endLines": "2,3,5,7",
+                        "endColumns": "70,82,12,12",
+                        "endOffsets": "121,204,303,414"
+                    }
+                }
+            ]
+        }
+    ]
+}
