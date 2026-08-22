@@ -9,6 +9,7 @@ import android.hardware.SensorManager
 import android.net.Uri
 import android.os.Bundle
 import android.view.Surface
+import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -16,9 +17,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.rememberTransformableState
-import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,11 +37,13 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.motionmouse.motion.*
 import com.motionmouse.ui.ScannerActivity
 import com.motionmouse.ui.OnboardingActivity
+import com.motionmouse.ui.SettingsActivity
 import com.motionmouse.ui.theme.MotionMouseTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.font.FontWeight
 
 class MainActivity : ComponentActivity(), SensorEventListener {
     private var networkClient: NetworkClient? = null
@@ -69,7 +76,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         onButtonAction = { btn, act -> networkClient?.sendButton(btn, act) },
                         onScroll = { dx, dy -> networkClient?.sendScroll(dx, dy) },
                         onStopClick = { toggleRunning() },
-                        onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() }
+                        onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() },
+                        onSettingsClick = { launchSettings() }
                     )
                 } else {
                     MainScreen(
@@ -78,11 +86,35 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                         isRunning = isRunning.value,
                         onScanClick = { launchScanner() },
                         onToggleRunning = { toggleRunning() },
-                        onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() }
+                        onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() },
+                        onSettingsClick = { launchSettings() }
                     )
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        refreshSettings()
+    }
+
+    private fun refreshSettings() {
+        val sharedPref = getSharedPreferences("motion_mouse_prefs", Context.MODE_PRIVATE)
+        val sensitivity = sharedPref.getFloat("sensitivity", 1.0f)
+        val keepScreenOn = sharedPref.getBoolean("keep_screen_on", false)
+
+        motionEngine.setSensitivityFactor(sensitivity)
+
+        if (keepScreenOn) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+
+    private fun launchSettings() {
+        startActivity(Intent(this, SettingsActivity::class.java))
     }
 
     private fun launchScanner() {
@@ -122,6 +154,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 networkClient?.connectionState?.collectLatest { state ->
                     connectionStatus.value = state.name
                     if (state == NetworkClient.ConnectionState.AUTHENTICATED) {
+                        saveDevice(url)
                         Toast.makeText(this@MainActivity, "Connected!", Toast.LENGTH_SHORT).show()
                     } else if (state == NetworkClient.ConnectionState.ERROR) {
                         isRunning.value = false
@@ -132,6 +165,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
         
         networkClient?.connect()
+    }
+
+    private fun saveDevice(url: String) {
+        val sharedPref = getSharedPreferences("motion_mouse_prefs", Context.MODE_PRIVATE)
+        val devices = sharedPref.getStringSet("paired_devices", emptySet())?.toMutableSet() ?: mutableSetOf()
+        if (devices.add(url)) {
+            sharedPref.edit().putStringSet("paired_devices", devices).apply()
+        }
     }
 
     private fun toggleRunning() {
@@ -207,6 +248,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     status: String,
@@ -214,96 +256,149 @@ fun MainScreen(
     isRunning: Boolean,
     onScanClick: () -> Unit,
     onToggleRunning: () -> Unit,
-    onCalibrateClick: () -> Unit
+    onCalibrateClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Motion Mouse", fontWeight = FontWeight.Bold) },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(16.dp),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Text(text = "Motion Mouse", style = MaterialTheme.typography.headlineLarge)
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Status: $status", style = MaterialTheme.typography.bodyLarge)
-                    Text(text = "Server: ${if (server.isEmpty()) "None" else server}", style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            Button(onClick = onScanClick, modifier = Modifier.fillMaxWidth()) {
-                Text("Scan Pairing QR")
-            }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            Button(
-                onClick = onToggleRunning,
+            // Connection Status Card
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isRunning) Color.Red else MaterialTheme.colorScheme.primary
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                 )
             ) {
-                Text(if (isRunning) "Stop Control" else "Start Control")
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (status == "AUTHENTICATED") Icons.Default.CheckCircle else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = if (status == "AUTHENTICATED") Color(0xFF4CAF50) else MaterialTheme.colorScheme.error
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (status == "AUTHENTICATED") "Connected" else status,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    if (server.isNotEmpty()) {
+                        Text(
+                            text = server,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            OutlinedButton(onClick = onCalibrateClick, modifier = Modifier.fillMaxWidth()) {
-                Text("Calibrate / Recenter")
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Main Actions
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Button(
+                    onClick = onScanClick,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = ShapeDefaults.Medium
+                ) {
+                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Pair New Device")
+                }
+
+                Button(
+                    onClick = onToggleRunning,
+                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                    shape = ShapeDefaults.Medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isRunning) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                    )
+                ) {
+                    Text(
+                        if (isRunning) "STOP CONTROL" else "START CONTROL",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onCalibrateClick,
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape = ShapeDefaults.Medium
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Recenter / Calibrate")
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InteractionScreen(
     onButtonAction: (String, String) -> Unit,
     onScroll: (Int, Int) -> Unit,
     onStopClick: () -> Unit,
-    onCalibrateClick: () -> Unit
+    onCalibrateClick: () -> Unit,
+    onSettingsClick: () -> Unit
 ) {
-    Scaffold { innerPadding ->
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Active Control", style = MaterialTheme.typography.titleSmall) },
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
+                },
+                navigationIcon = {
+                    IconButton(onClick = onStopClick) {
+                        Icon(Icons.Default.Warning, contentDescription = "Stop", tint = Color.Red)
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Top Controls
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(onClick = onStopClick, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
-                    Text("Stop")
-                }
-                Button(onClick = onCalibrateClick) {
-                    Text("Recenter")
-                }
-            }
-
             // Click Zones
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.4f)
-                    .padding(8.dp)
+                    .weight(0.5f)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Left Click Zone
-                Box(
+                Surface(
                     modifier = Modifier
                         .fillMaxHeight()
-                        .weight(1f)
-                        .padding(4.dp)
-                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .weight(1.2f)
                         .pointerInput(Unit) {
                             detectTapGestures(
                                 onPress = {
@@ -313,19 +408,29 @@ fun InteractionScreen(
                                 }
                             )
                         },
-                    contentAlignment = Alignment.Center
+                    shape = ShapeDefaults.Large,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    tonalElevation = 4.dp
                 ) {
-                    Text("LEFT CLICK", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            "LEFT",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
                 }
 
-                Column(modifier = Modifier.weight(0.5f)) {
+                Column(
+                    modifier = Modifier.weight(0.8f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     // Right Click
-                    Box(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f)
-                            .padding(4.dp)
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onPress = {
@@ -335,17 +440,18 @@ fun InteractionScreen(
                                     }
                                 )
                             },
-                        contentAlignment = Alignment.Center
+                        shape = ShapeDefaults.Large,
+                        color = MaterialTheme.colorScheme.secondaryContainer
                     ) {
-                        Text("RIGHT", color = MaterialTheme.colorScheme.onSecondaryContainer)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("RIGHT", fontWeight = FontWeight.Bold)
+                        }
                     }
                     // Middle Click
-                    Box(
+                    Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
-                            .padding(4.dp)
-                            .background(MaterialTheme.colorScheme.tertiaryContainer)
+                            .weight(0.6f)
                             .pointerInput(Unit) {
                                 detectTapGestures(
                                     onPress = {
@@ -355,31 +461,55 @@ fun InteractionScreen(
                                     }
                                 )
                             },
-                        contentAlignment = Alignment.Center
+                        shape = ShapeDefaults.Large,
+                        color = MaterialTheme.colorScheme.tertiaryContainer
                     ) {
-                        Text("MID", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("MID", style = MaterialTheme.typography.labelMedium)
+                        }
                     }
                 }
             }
 
             // Scroll Zone
-            Box(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(0.6f)
-                    .padding(8.dp)
-                    .background(Color.Gray.copy(alpha = 0.2f))
+                    .weight(0.5f)
+                    .padding(12.dp)
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            // Normalize scroll delta. Scroll wheel usually 120 per notch.
-                            // We can use a multiplier based on drag amount.
                             onScroll(dragAmount.x.toInt() * 2, dragAmount.y.toInt() * 2)
                         }
                     },
-                contentAlignment = Alignment.Center
+                shape = ShapeDefaults.Large,
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
-                Text("SCROLL ZONE")
+                Box(contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                        )
+                        Text(
+                            "SCROLL AREA",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                    }
+                }
+            }
+
+            // Recenter Button in Active Screen
+            Button(
+                onClick = onCalibrateClick,
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+            ) {
+                Text("RECENTER")
             }
         }
     }

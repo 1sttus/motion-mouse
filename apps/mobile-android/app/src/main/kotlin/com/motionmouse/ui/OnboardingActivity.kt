@@ -1,5 +1,6 @@
-package com.motionmouse.ui
+﻿package com.motionmouse.ui
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import android.Manifest
 import android.content.Context
 import android.content.Intent
@@ -51,6 +52,7 @@ class OnboardingActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun OnboardingScreen(onComplete: () -> Unit) {
     val pagerState = rememberPagerState(pageCount = { 3 })
@@ -238,3 +240,5 @@ fun FinalPage(onFinish: () -> Unit) {
         }
     }
 }
+
+
