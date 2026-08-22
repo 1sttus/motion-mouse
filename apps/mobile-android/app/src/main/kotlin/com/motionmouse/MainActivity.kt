@@ -31,6 +31,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.motionmouse.motion.*
 import com.motionmouse.ui.ScannerActivity
+import com.motionmouse.ui.OnboardingActivity
 import com.motionmouse.ui.theme.MotionMouseTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -48,6 +49,14 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        val sharedPref = getSharedPreferences("motion_mouse_prefs", Context.MODE_PRIVATE)
+        if (!sharedPref.getBoolean("onboarding_complete", false)) {
+            startActivity(Intent(this, OnboardingActivity::class.java))
+            finish()
+            return
+        }
+
         enableEdgeToEdge()
         
         motionEngine = MotionEngine()
@@ -95,7 +104,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
             val port = if (uri.port != -1) uri.port else 8080
             val token = uri.getQueryParameter("token") ?: throw Exception("Missing token")
             
-            val url = "wss://$host:$port"
+            val url = "wss://$host:$port/ws"
             serverInfo.value = "$host:$port"
             
             connectToServer(url, token)

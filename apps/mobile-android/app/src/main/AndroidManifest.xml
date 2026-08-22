@@ -22,6 +22,14 @@
             android:name=".ui.ScannerActivity"
             android:exported="false"
             android:theme="@style/Theme.MotionMouse" />
+        <activity
+            android:name=".ui.OnboardingActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MotionMouse" />
+        <activity
+            android:name=".ui.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.MotionMouse" />
     </application>
 
 </manifest>

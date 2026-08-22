@@ -60,6 +60,10 @@ class MotionEngine(private var config: MotionConfig = MotionConfig()) {
 
     fun getConfig() = config
     
+    fun setSensitivityFactor(factor: Float) {
+        config = config.copy(sensitivity = 900f * factor)
+    }
+
     fun getState() = mapOf(
         "paused" to isPaused,
         "strategy" to strategy,
