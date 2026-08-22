@@ -26,3 +26,9 @@ flowchart LR
 | OS adapter | semantic pointer actions → OS events | platform APIs / OS | permission/UIPI/Wayland denial | native integration tests |
 
 Security boundaries: phone↔LAN, receiver↔pointer engine, adapter↔OS. Platform boundaries: sensor host, desktop adapter. On loss, connection, authorization, or freshness, the receiver releases any held button and stops movement.
+
+## Phase 3 deployed slice
+
+`Android Chrome deviceorientation → motion-core → WSS v1 packet → MotionSession validation → PointerController → Windows PlatformPointerController → user32 cursor`.
+
+The receiver refuses movement until `session.hello` has a valid process token, acknowledgement assigns a session ID, and each subsequent pointer packet passes version, shape, timestamp, session, sequence, and delta-limit checks. A 3-second heartbeat timeout closes the socket; this stops dispatch and triggers mobile reconnect.

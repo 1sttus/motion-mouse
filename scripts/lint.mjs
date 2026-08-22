@@ -6,7 +6,7 @@ async function files(dir) {
   return (await Promise.all(entries.map((entry) => entry.isDirectory() ? files(join(dir, entry.name)) : [join(dir, entry.name)]))).flat();
 }
 
-const sourceFiles = (await files('packages')).filter((file) => file.endsWith('.js'));
+const sourceFiles = [...(await files('packages')), ...(await files('apps'))].filter((file) => file.endsWith('.js'));
 const violations = [];
 for (const file of sourceFiles) {
   const source = await readFile(file, 'utf8');

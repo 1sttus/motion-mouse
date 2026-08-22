@@ -21,7 +21,7 @@ Motion Mouse makes a phone a wireless, motion-controlled pointing device. Tilt/m
 
 ## Current status
 
-Phase 2 motion engine. The repository contains protocol and deterministic motion-domain packages, including a capability-aware motion engine and recorded-trace replay tests. It does **not** capture sensors on hardware, discover peers, open sockets, or inject desktop input.
+Phase 3 Android-browser → Windows development slice. The repository now provides a WSS receiver, explicit session protocol, reconnect/heartbeat safety, Android browser sensor sender, and a Windows-only pointer adapter. It was dry-run and protocol smoke-tested; it has not yet been demonstrated on a connected physical phone or with real cursor movement.
 
 ## Verified development environment (2026-08-21)
 

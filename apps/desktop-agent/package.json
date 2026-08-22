@@ -3,5 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Future desktop receiver and per-platform pointer adapter boundary."
+  "description": "Windows desktop receiver and per-platform pointer adapter boundary.",
+  "dependencies": {
+    "@motion-mouse/protocol": "0.1.0",
+    "selfsigned": "^5.4.0",
+    "ws": "^8.19.0"
+  }
 }

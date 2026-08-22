@@ -11,3 +11,10 @@
 | Bluetooth | optional transport experiment | n/a | BLE data path only; no MVP commitment; HID feasibility needs per-platform validation |
 
 Evidence: Android documents `TYPE_ROTATION_VECTOR`; Apple Core Motion exposes fused `CMDeviceMotion` but says availability must be checked; Windows `SendInput` is subject to UIPI; the XDG Remote Desktop portal requires a user-approved session and supports EIS. Source links are retained in DECISIONS.md.
+
+### Phase 3 implementation status
+
+| Slice | Implemented route | Validation status |
+| --- | --- | --- |
+| Android | Chrome browser, `deviceorientation`, HTTPS/WSS sender | source and protocol smoke-tested; requires real-phone permission/certificate acceptance |
+| Windows | Node receiver → pointer abstraction → persistent PowerShell Win32 `GetCursorPos`/`SetCursorPos` adapter | dry-run server and WSS handshake tested; real-cursor test intentionally awaits user hardware run |

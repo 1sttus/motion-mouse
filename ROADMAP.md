@@ -10,3 +10,7 @@
 | 6: Bluetooth investigation | feasibility prototype | documented capability/power/reliability decision; no silent scope expansion |
 
 Each phase closes only when acceptance criteria and linked test evidence are recorded in PROJECT_CONTEXT.md and relevant decision changes are logged.
+
+## Phase 3 status
+
+The Android-browser to Windows vertical slice is in progress. Automated protocol, motion, and dry-run WSS validation pass. It cannot be marked complete until a physical Android phone performs the connection, motion, stop, disconnect, and reconnect acceptance sequence on the local network and the requested latency, packet-rate, drop, CPU, and stability measurements are recorded.

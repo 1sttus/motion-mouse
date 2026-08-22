@@ -15,3 +15,7 @@ Assets: desktop cursor control, pairing credentials, session keys, user settings
 - Minimize privileges. Request macOS accessibility/Windows elevation only when the platform adapter actually needs it.
 
 Security review gates pairing UX, key lifecycle, downgrade behavior, and adapter permissions before public beta.
+
+## Phase 3 development exception
+
+The Android-browser spike uses a local self-signed HTTPS certificate and an unpredictable, one-time token in the displayed URL. This provides encrypted transport after the user explicitly inspects/accepts the certificate, but it is **not** the production QR identity/key-agreement design and must only be used on a private development LAN. The token is process-local and expires when the desktop agent stops. Production work must replace this exception with authenticated device pairing and a trusted certificate/identity flow.
