@@ -37,6 +37,7 @@ import com.motionmouse.motion.*
 import com.motionmouse.ui.ScannerActivity
 import com.motionmouse.ui.OnboardingActivity
 import com.motionmouse.ui.SettingsActivity
+import com.motionmouse.diagnostics.DiagnosticsService
 import com.motionmouse.ui.theme.MotionMouseTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -67,6 +68,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         
         motionEngine = MotionEngine()
         sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        DiagnosticsService.start(this)
         
         setContent {
             MotionMouseTheme {

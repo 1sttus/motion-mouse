@@ -25,6 +25,13 @@ class MotionSession {
     this.lastHeartbeat = Date.now();
     this.seq = 0;
     this.active = false;
+    this.stats = {
+      packets: 0,
+      drops: 0,
+      lastSeq: -1,
+      maxJitter: 0,
+      lastPacketTime: 0
+    };
 
     this.ws.on('message', (data) => this.handleMessage(data));
     this.ws.on('close', () => {
@@ -55,9 +62,31 @@ class MotionSession {
 
       this.lastHeartbeat = Date.now();
 
+      // Update stats
+      this.stats.packets++;
+      if (this.stats.lastSeq !== -1 && event.seq > this.stats.lastSeq + 1) {
+        this.stats.drops += (event.seq - this.stats.lastSeq - 1);
+      }
+      this.stats.lastSeq = event.seq;
+
+      const now = Date.now();
+      if (this.stats.lastPacketTime !== 0) {
+        const interval = now - this.stats.lastPacketTime;
+        const jitter = Math.abs(interval - 16); // 16ms is ideal for 60Hz
+        this.stats.maxJitter = Math.max(this.stats.maxJitter, jitter);
+      }
+      this.stats.lastPacketTime = now;
+
       switch (event.kind) {
         case 'session.heartbeat':
-          // Just update lastHeartbeat
+          this.ws.send(JSON.stringify({
+            v: 1,
+            kind: 'session.ack',
+            sessionId: this.sessionId,
+            seq: this.seq++,
+            sentAtMs: Date.now(),
+            payload: {}
+          }));
           break;
         case 'pointer.delta':
           if (this.active) {
@@ -103,7 +132,11 @@ class MotionSession {
 
   cleanup() {
     if (this.active) {
-      console.log(`[Session ${this.sessionId}] Closing session`);
+      console.log(`[Session ${this.sessionId}] Closing session. Stats:`, {
+        totalPackets: this.stats.packets,
+        estimatedDrops: this.stats.drops,
+        maxJitterMs: this.stats.maxJitter.toFixed(2)
+      });
       this.active = false;
       this.controller.stop();
     }
@@ -138,6 +171,10 @@ export function startServer() {
   const pairingStore = new PairingStore(PAIRING_STORE_PATH);
 
   let pairingInfo = qrProvider.generatePairingInfo(PORT);
+  if (process.env.MM_TOKEN) {
+    pairingInfo.token = process.env.MM_TOKEN;
+    console.log(`[Server] Overriding pairing token with: ${pairingInfo.token}`);
+  }
   const sessions = new Map();
 
   const updateTray = () => trayManager.updateStatus(sessions.size > 0);

@@ -20,6 +20,7 @@ class NetworkClient(
     private var webSocket: WebSocket? = null
     private var seq: Long = 0
     private var sessionId: String? = null
+    private var authStartTime: Long = 0
 
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState
@@ -67,6 +68,7 @@ class NetworkClient(
 
     private fun authenticate() {
         Log.d(TAG, "Sending auth packet with token: $token")
+        authStartTime = System.currentTimeMillis()
         val authPacket = Protocol.createAuthPacket(token, seq++)
         webSocket?.send(authPacket)
     }
@@ -76,6 +78,8 @@ class NetworkClient(
             val json = JSONObject(text)
             val kind = json.optString("kind")
             if (kind == "session.ack") {
+                val duration = System.currentTimeMillis() - authStartTime
+                Log.i(TAG, "Authenticated in ${duration}ms")
                 sessionId = json.optString("sessionId")
                 _connectionState.value = ConnectionState.AUTHENTICATED
                 startHeartbeat()
