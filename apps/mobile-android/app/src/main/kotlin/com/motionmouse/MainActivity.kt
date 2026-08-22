@@ -11,17 +11,20 @@ import android.os.Bundle
 import android.view.Surface
 import android.widget.Toast
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.rememberTransformableState
+import androidx.compose.foundation.gestures.transformable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -31,6 +34,8 @@ import com.motionmouse.ui.ScannerActivity
 import com.motionmouse.ui.theme.MotionMouseTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.geometry.Offset
 
 class MainActivity : ComponentActivity(), SensorEventListener {
     private var networkClient: NetworkClient? = null
@@ -50,14 +55,23 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         
         setContent {
             MotionMouseTheme {
-                MainScreen(
-                    status = connectionStatus.value,
-                    server = serverInfo.value,
-                    isRunning = isRunning.value,
-                    onScanClick = { launchScanner() },
-                    onToggleRunning = { toggleRunning() },
-                    onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() }
-                )
+                if (isRunning.value) {
+                    InteractionScreen(
+                        onButtonAction = { btn, act -> networkClient?.sendButton(btn, act) },
+                        onScroll = { dx, dy -> networkClient?.sendScroll(dx, dy) },
+                        onStopClick = { toggleRunning() },
+                        onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() }
+                    )
+                } else {
+                    MainScreen(
+                        status = connectionStatus.value,
+                        server = serverInfo.value,
+                        isRunning = isRunning.value,
+                        onScanClick = { launchScanner() },
+                        onToggleRunning = { toggleRunning() },
+                        onCalibrateClick = { motionEngine.calibrate(); networkClient?.sendCalibrate() }
+                    )
+                }
             }
         }
     }
@@ -234,6 +248,129 @@ fun MainScreen(
             
             OutlinedButton(onClick = onCalibrateClick, modifier = Modifier.fillMaxWidth()) {
                 Text("Calibrate / Recenter")
+            }
+        }
+    }
+}
+
+@Composable
+fun InteractionScreen(
+    onButtonAction: (String, String) -> Unit,
+    onScroll: (Int, Int) -> Unit,
+    onStopClick: () -> Unit,
+    onCalibrateClick: () -> Unit
+) {
+    Scaffold { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            // Top Controls
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Button(onClick = onStopClick, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+                    Text("Stop")
+                }
+                Button(onClick = onCalibrateClick) {
+                    Text("Recenter")
+                }
+            }
+
+            // Click Zones
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.4f)
+                    .padding(8.dp)
+            ) {
+                // Left Click Zone
+                Box(
+                    modifier = Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .padding(4.dp)
+                        .background(MaterialTheme.colorScheme.primaryContainer)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onPress = {
+                                    onButtonAction("left", "down")
+                                    tryAwaitRelease()
+                                    onButtonAction("left", "up")
+                                }
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("LEFT CLICK", color = MaterialTheme.colorScheme.onPrimaryContainer)
+                }
+
+                Column(modifier = Modifier.weight(0.5f)) {
+                    // Right Click
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(4.dp)
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        onButtonAction("right", "down")
+                                        tryAwaitRelease()
+                                        onButtonAction("right", "up")
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("RIGHT", color = MaterialTheme.colorScheme.onSecondaryContainer)
+                    }
+                    // Middle Click
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .padding(4.dp)
+                            .background(MaterialTheme.colorScheme.tertiaryContainer)
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = {
+                                        onButtonAction("middle", "down")
+                                        tryAwaitRelease()
+                                        onButtonAction("middle", "up")
+                                    }
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("MID", color = MaterialTheme.colorScheme.onTertiaryContainer)
+                    }
+                }
+            }
+
+            // Scroll Zone
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.6f)
+                    .padding(8.dp)
+                    .background(Color.Gray.copy(alpha = 0.2f))
+                    .pointerInput(Unit) {
+                        detectDragGestures { change, dragAmount ->
+                            change.consume()
+                            // Normalize scroll delta. Scroll wheel usually 120 per notch.
+                            // We can use a multiplier based on drag amount.
+                            onScroll(dragAmount.x.toInt() * 2, dragAmount.y.toInt() * 2)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text("SCROLL ZONE")
             }
         }
     }

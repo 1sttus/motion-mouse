@@ -53,6 +53,18 @@ class MotionSession {
             this.controller.move(event.payload.dx, event.payload.dy);
           }
           break;
+        case 'button':
+          if (this.active) {
+            const { button, action } = event.payload;
+            if (action === 'down') this.controller.buttonDown(button);
+            else this.controller.buttonUp(button);
+          }
+          break;
+        case 'scroll':
+          if (this.active) {
+            this.controller.scroll(event.payload.dx, event.payload.dy);
+          }
+          break;
         case 'calibrate':
           // Phase 3: Recenter is handled on mobile, but we can acknowledge it
           console.log(`[Session ${this.sessionId}] Calibration requested`);

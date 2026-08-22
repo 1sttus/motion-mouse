@@ -54,6 +54,38 @@ object Protocol {
         )
     }
 
+    fun createButtonPacket(sessionId: String, seq: Long, button: String, action: String): String {
+        val payload = buildJsonObject {
+            put("button", button)
+            put("action", action)
+        }
+        return json.encodeToString(
+            Envelope(
+                kind = "button",
+                seq = seq,
+                sentAtMs = System.currentTimeMillis(),
+                sessionId = sessionId,
+                payload = payload
+            )
+        )
+    }
+
+    fun createScrollPacket(sessionId: String, seq: Long, dx: Int, dy: Int): String {
+        val payload = buildJsonObject {
+            put("dx", dx)
+            put("dy", dy)
+        }
+        return json.encodeToString(
+            Envelope(
+                kind = "scroll",
+                seq = seq,
+                sentAtMs = System.currentTimeMillis(),
+                sessionId = sessionId,
+                payload = payload
+            )
+        )
+    }
+
     fun createHeartbeatPacket(sessionId: String, seq: Long): String {
         return json.encodeToString(
             Envelope(

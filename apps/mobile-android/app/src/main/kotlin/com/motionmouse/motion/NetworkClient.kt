@@ -129,6 +129,22 @@ class NetworkClient(
         }
     }
 
+    fun sendButton(button: String, action: String) {
+        sessionId?.let { id ->
+            scope.launch {
+                webSocket?.send(Protocol.createButtonPacket(id, seq++, button, action))
+            }
+        }
+    }
+
+    fun sendScroll(dx: Int, dy: Int) {
+        sessionId?.let { id ->
+            scope.launch {
+                webSocket?.send(Protocol.createScrollPacket(id, seq++, dx, dy))
+            }
+        }
+    }
+
     fun sendCalibrate() {
         sessionId?.let {
             scope.launch {
