@@ -64,26 +64,58 @@ async function runTest() {
   });
   console.log(`Client authenticated successfully: ${sessionId}`);
 
-  // Send Motion Data
-  console.log('Sending 20 motion packets...');
-  const start = Date.now();
-  for (let i = 0; i < 20; i++) {
-    ws.send(JSON.stringify({
-      v: 1,
-      kind: 'pointer.delta',
-      sessionId,
-      seq: i + 2,
-      sentAtMs: Date.now(),
-      payload: { dx: 5, dy: 5 }
-    }));
-    await new Promise(r => setTimeout(r, 16));
-  }
+  // Test Interactions
+  console.log('Testing Left Click Down...');
+  ws.send(JSON.stringify({
+    v: 1,
+    kind: 'button',
+    sessionId,
+    seq: 2,
+    sentAtMs: Date.now(),
+    payload: { button: 'left', action: 'down' }
+  }));
+  await new Promise(r => setTimeout(r, 100));
 
-  const end = Date.now();
-  console.log(`Finished sending 20 packets in ${end - start}ms`);
+  console.log('Testing Left Click Up...');
+  ws.send(JSON.stringify({
+    v: 1,
+    kind: 'button',
+    sessionId,
+    seq: 3,
+    sentAtMs: Date.now(),
+    payload: { button: 'left', action: 'up' }
+  }));
+  await new Promise(r => setTimeout(r, 100));
 
-  ws.close();
+  console.log('Testing Scrolling...');
+  ws.send(JSON.stringify({
+    v: 1,
+    kind: 'scroll',
+    sessionId,
+    seq: 4,
+    sentAtMs: Date.now(),
+    payload: { dx: 0, dy: 120 }
+  }));
+  await new Promise(r => setTimeout(r, 100));
+
+  // Test Safety: Disconnect while button is down
+  console.log('Testing Safety (Disconnect while Right Click Down)...');
+  ws.send(JSON.stringify({
+    v: 1,
+    kind: 'button',
+    sessionId,
+    seq: 5,
+    sentAtMs: Date.now(),
+    payload: { button: 'right', action: 'down' }
+  }));
+  await new Promise(r => setTimeout(r, 50));
+
+  console.log('Disconnecting client...');
+  ws.terminate();
+
+  await new Promise(r => setTimeout(r, 500));
   agent.kill();
+  console.log('Verification complete.');
   process.exit(0);
 }
 
